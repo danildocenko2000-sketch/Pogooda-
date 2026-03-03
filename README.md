@@ -1,39 +1,32 @@
-# Pogoda — додаток погоди (Weather App)
+# Pogoda
 
-Vue 3 + Vite. Прогноз по Open-Meteo, геолокація, пошук міст. **Запити можуть йти через Django:** Vue → Django → Open-Meteo / Nominatim.
+Усе в одній папці: **Django (API погоди)** + **Vue (додаток погоди)**. Без сантехніки/store — тільки погода.
 
-## Зв’язок Vue ↔ Django
+- **backend/** — Django, тільки ендпоінти `/api/weather/forecast/`, `search/`, `reverse/` (проксі на Open-Meteo та Nominatim).
+- **weather/** — Vue 3 + Vite, фронт погоди; запити йдуть на backend.
 
-- У `weather/.env` задано **VITE_API_URL=http://localhost:8000**.
-- Vue (додаток погоди) робить запити на Django: `/api/weather/forecast/`, `/api/weather/search/`, `/api/weather/reverse/`.
-- Django (backend) проксує їх на Open-Meteo та Nominatim і повертає JSON у відповідь.
+## Запуск
 
-## Запуск (Django + Vue разом)
-
-**1. Запустити Django (backend):**
+**1. Backend (Django):**
 ```bash
 cd backend
 pip install -r requirements.txt
-python manage.py migrate
 python manage.py runserver
 ```
-Сервер: http://localhost:8000
+→ http://localhost:8000
 
-**2. Запустити Vue (погода):**
+**2. Frontend (Vue):**
 ```bash
 cd weather
 npm install
 npm run dev
 ```
-Відкрити в браузері URL від Vite (наприклад http://localhost:5173). Запити погоди підуть на Django.
+→ відкрити URL Vite (наприклад http://localhost:5173). У `weather/.env` задано `VITE_API_URL=http://localhost:8000` — запити погоди йдуть на Django.
 
-Якщо Django не запущено — у `weather/.env` можна закоментувати або прибрати `VITE_API_URL`; тоді Vue буде звертатися напряму до Open-Meteo та Nominatim.
-
-## Збірка
+## Збірка фронту
 
 ```bash
 cd weather
 npm run build
 ```
-
-Файли збираються в `weather/dist/`.
+→ `weather/dist/`

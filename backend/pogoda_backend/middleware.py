@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""CORS для API: дозволити запити з Vue (інший порт)."""
+"""CORS: дозволити запити з Vue (інший порт)."""
 
 
 class CorsMiddleware:
@@ -11,8 +11,8 @@ class CorsMiddleware:
             from django.http import HttpResponse
             r = HttpResponse()
             r["Access-Control-Allow-Origin"] = "*"
-            r["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-            r["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-CSRFToken"
+            r["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            r["Access-Control-Allow-Headers"] = "Content-Type"
             return r
         response = self.get_response(request)
         if request.path.startswith("/api/"):

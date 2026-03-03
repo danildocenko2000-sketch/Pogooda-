@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Проксі API погоди: Vue робить запити на Django, Django — на Open-Meteo та Nominatim.
+Проксі API погоди: Vue → Django → Open-Meteo / Nominatim.
 """
 import json
 import urllib.error
 import urllib.parse
 import urllib.request
+
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
-from django.views.decorators.csrf import csrf_exempt
 
 OPEN_METEO_FORECAST = "https://api.open-meteo.com/v1/forecast"
 OPEN_METEO_GEO = "https://geocoding-api.open-meteo.com/v1/search"
@@ -80,7 +80,7 @@ def api_weather_search(request):
 
 @require_GET
 def api_weather_reverse(request):
-    """GET ?lat=&lon= → проксі до Nominatim reverse, повертає { \"name\": \"...\" }."""
+    """GET ?lat=&lon= → проксі до Nominatim reverse."""
     lat = request.GET.get("lat")
     lon = request.GET.get("lon")
     if not lat or not lon:
