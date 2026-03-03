@@ -1,6 +1,7 @@
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { weatherCodes, dayNames, shortDayNames } from '../data/weatherCodes.js'
 import { getWeatherIcon } from '../utils/weatherIcons.js'
+import { getForecast, searchCities as apiSearchCities, reverseGeocode } from '../api/weather.js'
 
 export function useWeather() {
   const unit = ref('celsius')
@@ -141,26 +142,9 @@ export function useWeather() {
       return
     }
     try {
-      const lang = searchOnlyUkraine.value ? 'uk' : 'ru'
-      const countryParam = searchOnlyUkraine.value ? '&countryCode=UA' : ''
-      const res = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=${lang}&format=json${countryParam}`
-      )
-      const data = await res.json()
-      if (data.results?.length) {
-        searchResults.value = data.results.map((city) => ({
-          name: city.name,
-          admin1: city.admin1,
-          country: city.country,
-          lat: city.latitude,
-          lon: city.longitude,
-          displayName: `${city.name}${city.admin1 ? ', ' + city.admin1 : ''}${city.country ? ', ' + city.country : ''}`,
-        }))
-        searchResultsVisible.value = true
-      } else {
-        searchResults.value = []
-        searchResultsVisible.value = true
-      }
+      const list = await apiSearchCities(q, { onlyUkraine: searchOnlyUkraine.value })
+      searchResults.value = list
+      searchResultsVisible.value = true
     } catch {
       searchResults.value = []
       searchResultsVisible.value = false
@@ -178,10 +162,7 @@ export function useWeather() {
     loading.value = true
     showError.value = false
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,wind_speed_10m_max&timezone=auto&forecast_days=7`
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('Failed to fetch weather')
-      const data = await res.json()
+      const data = await getForecast(latitude, longitude)
       weatherData.value = data
       currentCity.value = cityName
       lat.value = latitude
@@ -212,22 +193,7 @@ export function useWeather() {
         const { latitude, longitude } = position.coords
         let placeName = 'Поточна локація'
         try {
-          const rev = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=uk&addressdetails=1`
-          )
-          if (rev.ok) {
-            const d = await rev.json()
-            const a = d.address || {}
-            placeName =
-              a.city ||
-              a.town ||
-              a.village ||
-              a.municipality ||
-              a.hamlet ||
-              a.county ||
-              (a.state && a.country ? `${a.state}, ${a.country}` : a.country) ||
-              placeName
-          }
+          placeName = await reverseGeocode(latitude, longitude)
         } catch {}
         fetchWeather(latitude, longitude, placeName)
       },
