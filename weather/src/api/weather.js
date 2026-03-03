@@ -1,19 +1,28 @@
 /**
- * API погоди та геокодування.
- * Open-Meteo (прогноз, пошук міст), Nominatim (reverse geocode).
+ * API погоди: запити йдуть на Django (якщо задано VITE_API_URL), Django проксує на Open-Meteo та Nominatim.
  */
+
+const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 const OPEN_METEO_FORECAST = 'https://api.open-meteo.com/v1/forecast'
 const OPEN_METEO_GEO = 'https://geocoding-api.open-meteo.com/v1/search'
 const NOMINATIM_REVERSE = 'https://nominatim.openstreetmap.org/reverse'
 
+function useDjango() {
+  return Boolean(BASE)
+}
+
 /**
- * Прогноз погоди на 7 днів (почасовий + денний).
- * @param {number} latitude
- * @param {number} longitude
- * @returns {Promise<object>} Відповідь Open-Meteo (hourly, daily, ...)
+ * Прогноз погоди на 7 днів.
+ * Якщо VITE_API_URL задано — запит на Django /api/weather/forecast/, інакше напряму на Open-Meteo.
  */
 export async function getForecast(latitude, longitude) {
+  if (useDjango()) {
+    const params = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude) })
+    const res = await fetch(`${BASE}/api/weather/forecast/?${params}`)
+    if (!res.ok) throw new Error('Failed to fetch weather')
+    return res.json()
+  }
   const params = new URLSearchParams({
     latitude: String(latitude),
     longitude: String(longitude),
@@ -28,14 +37,20 @@ export async function getForecast(latitude, longitude) {
 }
 
 /**
- * Пошук міст за назвою (Open-Meteo Geocoding).
- * @param {string} query — рядок пошуку (мінімум 2 символи)
- * @param {{ onlyUkraine?: boolean }} options
- * @returns {Promise<Array<{ name, admin1, country, lat, lon, displayName }>>}
+ * Пошук міст. Якщо VITE_API_URL задано — запит на Django /api/weather/search/.
  */
 export async function searchCities(query, { onlyUkraine = false } = {}) {
   const q = query.trim()
   if (q.length < 2) return []
+  if (useDjango()) {
+    const params = new URLSearchParams({
+      q,
+      only_ukraine: onlyUkraine ? '1' : '0',
+    })
+    const res = await fetch(`${BASE}/api/weather/search/?${params}`)
+    const data = await res.json().catch(() => ({ results: [] }))
+    return data.results || []
+  }
   const params = new URLSearchParams({
     name: q,
     count: '10',
@@ -57,12 +72,15 @@ export async function searchCities(query, { onlyUkraine = false } = {}) {
 }
 
 /**
- * Назва місця за координатами (Nominatim reverse geocoding).
- * @param {number} latitude
- * @param {number} longitude
- * @returns {Promise<string>} Назва місця або 'Поточна локація'
+ * Reverse geocode. Якщо VITE_API_URL задано — запит на Django /api/weather/reverse/.
  */
 export async function reverseGeocode(latitude, longitude) {
+  if (useDjango()) {
+    const params = new URLSearchParams({ lat: String(latitude), lon: String(longitude) })
+    const res = await fetch(`${BASE}/api/weather/reverse/?${params}`)
+    const data = await res.json().catch(() => ({}))
+    return data.name || 'Поточна локація'
+  }
   const params = new URLSearchParams({
     format: 'json',
     lat: String(latitude),
